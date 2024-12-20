@@ -1,0 +1,132 @@
+[
+  {
+    "image": "assets\\3896402e-77fe-4fc7-8368-823bbe803ea6.__CR0,0,970,600_PT0_SX970_V1___.jpg",
+    "start_time": 0.0,
+    "end_time": 4.5375,
+    "duration": 4.5375,
+    "crop_box": [
+      0,
+      53,
+      1920,
+      1133
+    ],
+    "scale_factor": 1.9793814432989691
+  },
+  {
+    "image": "assets\\81ef275effa427553a847bc220bebe1dc314b2e79d00333f94a6bcadd7cce851.jpg",
+    "start_time": 4.5375,
+    "end_time": 9.075,
+    "duration": 4.5375,
+    "crop_box": [
+      0,
+      0,
+      1920,
+      1080
+    ],
+    "scale_factor": 0.5
+  },
+  {
+    "image": "assets\\article_full@3x.jpg",
+    "start_time": 9.075,
+    "end_time": 13.612499999999999,
+    "duration": 4.5375,
+    "crop_box": [
+      0,
+      6,
+      1920,
+      1086
+    ],
+    "scale_factor": 0.810126582278481
+  },
+  {
+    "image": "assets\\Batman-The-Enemy-Within-Episode-2-pc-games1.jpg",
+    "start_time": 13.612499999999999,
+    "end_time": 18.15,
+    "duration": 4.5375,
+    "crop_box": [
+      1,
+      0,
+      1921,
+      1080
+    ],
+    "scale_factor": 1.6023738872403561
+  },
+  {
+    "image": "assets\\download (1).jpg",
+    "start_time": 18.15,
+    "end_time": 22.6875,
+    "duration": 4.5375,
+    "crop_box": [
+      0,
+      939,
+      1920,
+      2019
+    ],
+    "scale_factor": 10.607734806629834
+  },
+  {
+    "image": "assets\\download (2).jpg",
+    "start_time": 22.6875,
+    "end_time": 27.225,
+    "duration": 4.5375,
+    "crop_box": [
+      0,
+      804,
+      1920,
+      1884
+    ],
+    "scale_factor": 10.105263157894736
+  },
+  {
+    "image": "assets\\download (3).jpg",
+    "start_time": 27.225,
+    "end_time": 31.762500000000003,
+    "duration": 4.5375,
+    "crop_box": [
+      0,
+      420,
+      1920,
+      1500
+    ],
+    "scale_factor": 8.533333333333333
+  },
+  {
+    "image": "assets\\download.jpg",
+    "start_time": 31.762500000000003,
+    "end_time": 36.300000000000004,
+    "duration": 4.5375,
+    "crop_box": [
+      0,
+      804,
+      1920,
+      1884
+    ],
+    "scale_factor": 10.105263157894736
+  },
+  {
+    "image": "assets\\download.png",
+    "start_time": 36.300000000000004,
+    "end_time": 40.837500000000006,
+    "duration": 4.5375,
+    "crop_box": [
+      4,
+      0,
+      1924,
+      1080
+    ],
+    "scale_factor": 6.428571428571429
+  },
+  {
+    "image": "assets\\images.jpg",
+    "start_time": 40.837500000000006,
+    "end_time": 45.37500000000001,
+    "duration": 4.5375,
+    "crop_box": [
+      268,
+      0,
+      2188,
+      1080
+    ],
+    "scale_factor": 7.248322147651007
+  }
+]
