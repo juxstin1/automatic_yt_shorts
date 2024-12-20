@@ -1,14 +1,21 @@
 import os
 import json
 from pathlib import Path
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Literal
 from PIL import Image
 from pydub import AudioSegment
-from moviepy.editor import VideoFileClip, ImageClip, AudioFileClip, concatenate_videoclips
+import moviepy.editor as mpy
 
 VALID_IMAGE_FORMATS = {'.jpg', '.png', '.jpeg'}
 VALID_AUDIO_FORMATS = {'.mp3', '.wav'}
-TARGET_RESOLUTION = (1920, 1080)  # 16:9 HD resolution
+# Video format configurations
+FORMAT_CONFIGS = {
+    '16:9': {'width': 1920, 'height': 1080},  # Landscape HD
+    '9:16': {'width': 1080, 'height': 1920},  # Portrait (Stories/Reels)
+    '1:1': {'width': 1080, 'height': 1080},   # Square
+}
+
+TARGET_RESOLUTION = (1920, 1080)  # Default 16:9 HD resolution
 
 def validate_assets() -> Tuple[bool, List[str]]:
     """
@@ -116,7 +123,7 @@ def sync_assets(audio_duration: float, image_metadata: List[Dict]) -> None:
     print(f"Each image will display for {time_per_image:.2f} seconds")
     print(f"Total duration: {audio_duration:.2f} seconds")
 
-def assemble_video() -> None:
+def assemble_video() -> mpy.VideoFileClip:
     """
     Assemble the final video using the processed assets and timeline
     """
@@ -158,19 +165,57 @@ def assemble_video() -> None:
     # Set the audio to the video
     final_clip = final_clip.set_audio(final_audio)
     
-    # Write the final video
-    output_path = Path('output') / 'base_video.mp4'
-    final_clip.write_videofile(
+    return final_clip
+
+def export_video(clip: mpy.VideoFileClip, format_ratio: Literal['16:9', '9:16', '1:1'] = '16:9') -> None:
+    """
+    Export video in specified aspect ratio with appropriate padding/cropping
+    """
+    config = FORMAT_CONFIGS[format_ratio]
+    target_width = config['width']
+    target_height = config['height']
+    
+    # Calculate scaling factors
+    width_ratio = target_width / clip.w
+    height_ratio = target_height / clip.h
+    
+    if format_ratio == '16:9':
+        # For landscape, maintain original aspect ratio
+        final = clip.resize(width=target_width, height=target_height)
+    else:
+        if format_ratio == '9:16':
+            # For portrait, crop sides and scale
+            crop_width = clip.w * (9/16)
+            x_center = (clip.w - crop_width) / 2
+            final = (clip
+                    .crop(x1=x_center, y1=0, x2=x_center + crop_width, y2=clip.h)
+                    .resize(width=target_width, height=target_height))
+        else:  # 1:1
+            # For square, crop to center
+            if clip.w > clip.h:
+                # Landscape source: crop sides
+                crop_size = clip.h
+                x_center = (clip.w - crop_size) / 2
+                final = (clip
+                        .crop(x1=x_center, y1=0, x2=x_center + crop_size, y2=crop_size)
+                        .resize(width=target_width, height=target_height))
+            else:
+                # Portrait source: crop top/bottom
+                crop_size = clip.w
+                y_center = (clip.h - crop_size) / 2
+                final = (clip
+                        .crop(x1=0, y1=y_center, x2=crop_size, y2=y_center + crop_size)
+                        .resize(width=target_width, height=target_height))
+    
+    # Export with format-specific filename
+    output_path = Path('output') / f'video_{format_ratio.replace(":", "x")}.mp4'
+    final.write_videofile(
         str(output_path),
         fps=30,
         codec='libx264',
         audio_codec='aac'
     )
-    
-    # Clean up
-    final_clip.close()
-    narration.close()
-    background_music.close()
+    final.close()
 
 def main():
     is_valid, errors = validate_assets()
@@ -190,9 +235,18 @@ def main():
         sync_assets(audio_duration, image_metadata)
         
         print("\nAssembling video...")
-        assemble_video()
+        final_clip = assemble_video()
         
-        print("\nProcessing complete! Final video saved as output/base_video.mp4")
+        print("\nExporting videos in different formats...")
+        # Export in all supported formats
+        for format_ratio in FORMAT_CONFIGS.keys():
+            print(f"Exporting {format_ratio} version...")
+            export_video(final_clip, format_ratio)
+        
+        # Clean up
+        final_clip.close()
+        
+        print("\nProcessing complete! Videos exported to output directory")
     except Exception as e:
         print(f"Error during processing: {str(e)}")
 
