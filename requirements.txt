@@ -1,3 +1,4 @@
 pathlib
 Pillow
 pydub
+moviepy

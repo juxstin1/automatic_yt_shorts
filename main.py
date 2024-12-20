@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Tuple, Dict
 from PIL import Image
 from pydub import AudioSegment
+from moviepy.editor import VideoFileClip, ImageClip, AudioFileClip, concatenate_videoclips
 
 VALID_IMAGE_FORMATS = {'.jpg', '.png', '.jpeg'}
 VALID_AUDIO_FORMATS = {'.mp3', '.wav'}
@@ -115,6 +116,62 @@ def sync_assets(audio_duration: float, image_metadata: List[Dict]) -> None:
     print(f"Each image will display for {time_per_image:.2f} seconds")
     print(f"Total duration: {audio_duration:.2f} seconds")
 
+def assemble_video() -> None:
+    """
+    Assemble the final video using the processed assets and timeline
+    """
+    # Load timeline
+    with open(Path('output') / 'sync_log.txt', 'r') as f:
+        timeline = json.load(f)
+    
+    # Create video clips from images
+    clips = []
+    for entry in timeline:
+        img_clip = ImageClip(entry['image'])
+        img_clip = img_clip.set_duration(entry['duration'])
+        clips.append(img_clip)
+    
+    # Concatenate all image clips
+    final_clip = concatenate_videoclips(clips, method="compose")
+    
+    # Add narration audio
+    narration_path = next(Path('assets').glob('narration.*'))
+    narration = AudioFileClip(str(narration_path))
+    
+    # Add background music
+    music_path = next(Path('assets').glob('background_music.*'))
+    background_music = AudioFileClip(str(music_path))
+    
+    # Loop background music if shorter than video
+    if background_music.duration < final_clip.duration:
+        background_music = background_music.loop(duration=final_clip.duration)
+    else:
+        background_music = background_music.subclip(0, final_clip.duration)
+    
+    # Set background music volume to 20% of original
+    background_music = background_music.volumex(0.2)
+    
+    # Combine audio tracks
+    final_audio = narration.audio_fadeout(1)
+    final_audio = final_audio.mix(background_music.audio_fadeout(2))
+    
+    # Set the audio to the video
+    final_clip = final_clip.set_audio(final_audio)
+    
+    # Write the final video
+    output_path = Path('output') / 'base_video.mp4'
+    final_clip.write_videofile(
+        str(output_path),
+        fps=30,
+        codec='libx264',
+        audio_codec='aac'
+    )
+    
+    # Clean up
+    final_clip.close()
+    narration.close()
+    background_music.close()
+
 def main():
     is_valid, errors = validate_assets()
     if not is_valid:
@@ -132,7 +189,10 @@ def main():
         print("\nCreating timeline...")
         sync_assets(audio_duration, image_metadata)
         
-        print("\nProcessing complete! Check output/sync_log.txt for timeline details")
+        print("\nAssembling video...")
+        assemble_video()
+        
+        print("\nProcessing complete! Final video saved as output/base_video.mp4")
     except Exception as e:
         print(f"Error during processing: {str(e)}")
 
