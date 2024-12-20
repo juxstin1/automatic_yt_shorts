@@ -123,10 +123,12 @@ def sync_assets(audio_duration: float, image_metadata: List[Dict]) -> None:
     
     for idx, img_data in enumerate(image_metadata):
         entry = {
-            'image': img_data['processed_path'],
+            'image': img_data['path'],
             'start_time': current_time,
             'end_time': current_time + time_per_image,
-            'duration': time_per_image
+            'duration': time_per_image,
+            'crop_box': img_data['crop_box'],
+            'scale_factor': img_data['scale_factor']
         }
         timeline.append(entry)
         current_time += time_per_image
@@ -148,29 +150,20 @@ def assemble_video() -> mpy.VideoFileClip:
     with open(Path('output') / 'sync_log.txt', 'r') as f:
         timeline = json.load(f)
     
-    # Create video clips from images with proper scaling
+    # Create video clips from images using pre-calculated dimensions
     clips = []
     for entry in timeline:
         # Load and process image
         with Image.open(entry['image']) as img:
-            # Scale image
-            width_ratio = TARGET_RESOLUTION[0] / img.size[0]
-            height_ratio = TARGET_RESOLUTION[1] / img.size[1]
-            scale_factor = max(width_ratio, height_ratio)
-            
+            # Scale image using pre-calculated factor
             new_size = (
-                int(img.size[0] * scale_factor),
-                int(img.size[1] * scale_factor)
+                int(img.size[0] * entry['scale_factor']),
+                int(img.size[1] * entry['scale_factor'])
             )
             img_resized = img.resize(new_size, Image.Resampling.LANCZOS)
             
-            # Center crop
-            left = (new_size[0] - TARGET_RESOLUTION[0]) // 2
-            top = (new_size[1] - TARGET_RESOLUTION[1]) // 2
-            right = left + TARGET_RESOLUTION[0]
-            bottom = top + TARGET_RESOLUTION[1]
-            
-            img_final = img_resized.crop((left, top, right, bottom))
+            # Crop using pre-calculated box
+            img_final = img_resized.crop(entry['crop_box'])
             
         # Convert PIL image to MoviePy clip
         img_array = np.array(img_final)
