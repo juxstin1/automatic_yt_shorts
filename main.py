@@ -80,17 +80,35 @@ def process_inputs() -> Tuple[float, List[Dict]]:
     image_metadata = []
     for img_path in image_files:
         with Image.open(img_path) as img:
-            # Resize image maintaining aspect ratio
-            img.thumbnail(TARGET_RESOLUTION, Image.Resampling.LANCZOS)
+            # Calculate scaling factors
+            width_ratio = TARGET_RESOLUTION[0] / img.size[0]
+            height_ratio = TARGET_RESOLUTION[1] / img.size[1]
+            scale_factor = max(width_ratio, height_ratio)
+            
+            # Scale up to fill screen
+            new_size = (
+                int(img.size[0] * scale_factor),
+                int(img.size[1] * scale_factor)
+            )
+            img_resized = img.resize(new_size, Image.Resampling.LANCZOS)
+            
+            # Center crop if needed
+            left = (new_size[0] - TARGET_RESOLUTION[0]) // 2
+            top = (new_size[1] - TARGET_RESOLUTION[1]) // 2
+            right = left + TARGET_RESOLUTION[0]
+            bottom = top + TARGET_RESOLUTION[1]
+            
+            img_final = img_resized.crop((left, top, right, bottom))
+            
             # Save processed image
             output_path = Path('output') / f"processed_{img_path.name}"
-            img.save(output_path)
+            img_final.save(output_path, quality=95)
             
             metadata = {
                 'original_path': str(img_path),
                 'processed_path': str(output_path),
-                'size': img.size,
-                'aspect_ratio': f"{img.size[0]}/{img.size[1]}"
+                'size': TARGET_RESOLUTION,
+                'aspect_ratio': f"{TARGET_RESOLUTION[0]}/{TARGET_RESOLUTION[1]}"
             }
             image_metadata.append(metadata)
     
@@ -181,33 +199,28 @@ def export_video(clip: mpy.VideoFileClip, format_ratio: Literal['16:9', '9:16', 
     width_ratio = target_width / clip.w
     height_ratio = target_height / clip.h
     
-    if format_ratio == '16:9':
-        # For landscape, maintain original aspect ratio
-        final = clip.resize(width=target_width, height=target_height)
-    else:
-        if format_ratio == '9:16':
-            # For portrait, crop sides and scale
-            crop_width = clip.w * (9/16)
-            x_center = (clip.w - crop_width) / 2
-            final = (clip
-                    .crop(x1=x_center, y1=0, x2=x_center + crop_width, y2=clip.h)
-                    .resize(width=target_width, height=target_height))
-        else:  # 1:1
-            # For square, crop to center
-            if clip.w > clip.h:
-                # Landscape source: crop sides
-                crop_size = clip.h
-                x_center = (clip.w - crop_size) / 2
-                final = (clip
-                        .crop(x1=x_center, y1=0, x2=x_center + crop_size, y2=crop_size)
-                        .resize(width=target_width, height=target_height))
-            else:
-                # Portrait source: crop top/bottom
-                crop_size = clip.w
-                y_center = (clip.h - crop_size) / 2
-                final = (clip
-                        .crop(x1=0, y1=y_center, x2=crop_size, y2=y_center + crop_size)
-                        .resize(width=target_width, height=target_height))
+    # Calculate scaling factors to fill the target resolution
+    width_ratio = target_width / clip.w
+    height_ratio = target_height / clip.h
+    scale_factor = max(width_ratio, height_ratio)
+    
+    # Scale up to fill screen
+    scaled_width = int(clip.w * scale_factor)
+    scaled_height = int(clip.h * scale_factor)
+    
+    # Resize while maintaining quality
+    scaled_clip = clip.resize(width=scaled_width, height=scaled_height)
+    
+    # Center crop to target resolution
+    x_center = (scaled_width - target_width) // 2
+    y_center = (scaled_height - target_height) // 2
+    
+    final = scaled_clip.crop(
+        x1=x_center,
+        y1=y_center,
+        x2=x_center + target_width,
+        y2=y_center + target_height
+    )
     
     # Export with format-specific filename
     output_path = Path('output') / f'video_{format_ratio.replace(":", "x")}.mp4'
