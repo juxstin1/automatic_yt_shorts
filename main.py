@@ -1,5 +1,6 @@
 import os
 import json
+import numpy as np
 from pathlib import Path
 from typing import List, Tuple, Dict, Literal
 from PIL import Image
@@ -100,15 +101,11 @@ def process_inputs() -> Tuple[float, List[Dict]]:
             
             img_final = img_resized.crop((left, top, right, bottom))
             
-            # Save processed image
-            output_path = Path('output') / f"processed_{img_path.name}"
-            img_final.save(output_path, quality=95)
-            
             metadata = {
-                'original_path': str(img_path),
-                'processed_path': str(output_path),
+                'path': str(img_path),
                 'size': TARGET_RESOLUTION,
-                'aspect_ratio': f"{TARGET_RESOLUTION[0]}/{TARGET_RESOLUTION[1]}"
+                'crop_box': (left, top, right, bottom),
+                'scale_factor': scale_factor
             }
             image_metadata.append(metadata)
     
@@ -151,11 +148,33 @@ def assemble_video() -> mpy.VideoFileClip:
     with open(Path('output') / 'sync_log.txt', 'r') as f:
         timeline = json.load(f)
     
-    # Create video clips from images
+    # Create video clips from images with proper scaling
     clips = []
     for entry in timeline:
-        img_clip = mpy.ImageClip(entry['image'])
-        img_clip = img_clip.set_duration(entry['duration'])
+        # Load and process image
+        with Image.open(entry['image']) as img:
+            # Scale image
+            width_ratio = TARGET_RESOLUTION[0] / img.size[0]
+            height_ratio = TARGET_RESOLUTION[1] / img.size[1]
+            scale_factor = max(width_ratio, height_ratio)
+            
+            new_size = (
+                int(img.size[0] * scale_factor),
+                int(img.size[1] * scale_factor)
+            )
+            img_resized = img.resize(new_size, Image.Resampling.LANCZOS)
+            
+            # Center crop
+            left = (new_size[0] - TARGET_RESOLUTION[0]) // 2
+            top = (new_size[1] - TARGET_RESOLUTION[1]) // 2
+            right = left + TARGET_RESOLUTION[0]
+            bottom = top + TARGET_RESOLUTION[1]
+            
+            img_final = img_resized.crop((left, top, right, bottom))
+            
+        # Convert PIL image to MoviePy clip
+        img_array = np.array(img_final)
+        img_clip = mpy.ImageClip(img_array).set_duration(entry['duration'])
         clips.append(img_clip)
     
     # Concatenate all image clips
