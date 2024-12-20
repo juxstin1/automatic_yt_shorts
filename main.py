@@ -266,4 +266,6 @@ def main():
         print(f"Error during processing: {str(e)}")
 
 if __name__ == "__main__":
-    main()
+    from ui import VideoCreatorUI
+    app = VideoCreatorUI()
+    app.run()
