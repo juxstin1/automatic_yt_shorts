@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Literal
 from PIL import Image
 from pydub import AudioSegment
+from moviepy.editor import (VideoFileClip, ImageClip, AudioFileClip, 
+                          concatenate_videoclips, CompositeVideoClip)
 import moviepy.editor as mpy
 
 VALID_IMAGE_FORMATS = {'.jpg', '.png', '.jpeg'}
@@ -134,20 +136,20 @@ def assemble_video() -> mpy.VideoFileClip:
     # Create video clips from images
     clips = []
     for entry in timeline:
-        img_clip = ImageClip(entry['image'])
+        img_clip = mpy.ImageClip(entry['image'])
         img_clip = img_clip.set_duration(entry['duration'])
         clips.append(img_clip)
     
     # Concatenate all image clips
-    final_clip = concatenate_videoclips(clips, method="compose")
+    final_clip = mpy.concatenate_videoclips(clips, method="compose")
     
     # Add narration audio
     narration_path = next(Path('assets').glob('narration.*'))
-    narration = AudioFileClip(str(narration_path))
+    narration = mpy.AudioFileClip(str(narration_path))
     
     # Add background music
     music_path = next(Path('assets').glob('background_music.*'))
-    background_music = AudioFileClip(str(music_path))
+    background_music = mpy.AudioFileClip(str(music_path))
     
     # Loop background music if shorter than video
     if background_music.duration < final_clip.duration:
