@@ -199,8 +199,9 @@ def assemble_video() -> mpy.VideoFileClip:
     background_music = background_music.volumex(0.2)
     
     # Combine audio tracks
-    final_audio = narration.audio_fadeout(1)
-    final_audio = final_audio.mix(background_music.audio_fadeout(2))
+    narration = narration.audio_fadeout(1)
+    background_music = background_music.audio_fadeout(2)
+    final_audio = mpy.CompositeAudioClip([narration, background_music])
     
     # Set the audio to the video
     final_clip = final_clip.set_audio(final_audio)
