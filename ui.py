@@ -142,7 +142,8 @@ class VideoCreatorUI:
             # Run main processing
             main.main()
             
-            self.status_label.configure(text="Video created successfully!")
+            output_dir = os.path.abspath("output")
+            self.status_label.configure(text=f"Videos created successfully!\nExported to: {output_dir}")
             
         except Exception as e:
             self.status_label.configure(text=f"Error: {str(e)}")
