@@ -3,6 +3,7 @@ import json
 import numpy as np
 from pathlib import Path
 from typing import List, Tuple, Dict, Literal
+from utils import setup_logging
 from PIL import Image
 from pydub import AudioSegment
 from moviepy.editor import (VideoFileClip, ImageClip, AudioFileClip, 
@@ -146,13 +147,19 @@ def assemble_video() -> mpy.VideoFileClip:
     """
     Assemble the final video using the processed assets and timeline
     """
+    logger = logging.getLogger(__name__)
+    
     # Load timeline
-    with open(Path('output') / 'sync_log.txt', 'r') as f:
+    timeline_path = Path('output') / 'sync_log.txt'
+    logger.debug(f"Loading timeline from {timeline_path}")
+    with open(timeline_path, 'r') as f:
         timeline = json.load(f)
+    logger.debug(f"Loaded timeline with {len(timeline)} entries")
     
     # Create video clips from images using pre-calculated dimensions
     clips = []
-    for entry in timeline:
+    for idx, entry in enumerate(timeline):
+        logger.debug(f"Processing image {idx + 1}/{len(timeline)}: {entry['image']}")
         # Load and process image
         with Image.open(entry['image']) as img:
             # Scale image using pre-calculated factor
@@ -245,37 +252,49 @@ def export_video(clip: mpy.VideoFileClip, format_ratio: Literal['16:9', '9:16', 
     final.close()
 
 def main():
+    logger = setup_logging()
+    logger.info("Starting video creation process")
+    
     is_valid, errors = validate_assets()
     if not is_valid:
-        print("Asset validation failed:")
+        logger.error("Asset validation failed:")
         for error in errors:
-            print(f"- {error}")
+            logger.error(f"- {error}")
         return
     
-    print("All assets validated successfully!")
+    logger.info("All assets validated successfully!")
     
     try:
-        print("\nProcessing inputs...")
+        logger.info("Processing inputs...")
+        logger.debug("Reading audio files and processing images")
         audio_duration, image_metadata = process_inputs()
+        logger.debug(f"Audio duration: {audio_duration:.2f}s")
+        logger.debug(f"Number of images: {len(image_metadata)}")
         
-        print("\nCreating timeline...")
+        logger.info("Creating timeline...")
+        logger.debug("Calculating image durations and transitions")
         sync_assets(audio_duration, image_metadata)
         
-        print("\nAssembling video...")
+        logger.info("Assembling video...")
+        logger.debug("Creating video clips from images")
         final_clip = assemble_video()
         
-        print("\nExporting videos in different formats...")
+        logger.info("Exporting videos in different formats...")
         # Export in all supported formats
         for format_ratio in FORMAT_CONFIGS.keys():
-            print(f"Exporting {format_ratio} version...")
-            export_video(final_clip, format_ratio)
+            logger.info(f"Exporting {format_ratio} version...")
+            try:
+                export_video(final_clip, format_ratio)
+                logger.debug(f"Successfully exported {format_ratio} version")
+            except Exception as e:
+                logger.error(f"Failed to export {format_ratio} version: {str(e)}")
         
         # Clean up
         final_clip.close()
         
-        print("\nProcessing complete! Videos exported to output directory")
+        logger.info("Processing complete! Videos exported to output directory")
     except Exception as e:
-        print(f"Error during processing: {str(e)}")
+        logger.error(f"Error during processing: {str(e)}", exc_info=True)
 
 if __name__ == "__main__":
     from ui import VideoCreatorUI
